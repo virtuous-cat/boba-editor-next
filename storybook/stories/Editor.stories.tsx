@@ -194,13 +194,6 @@ export const LimitedHeadings: Story = {
 export const GifSearch: Story = {
   args: {
     ...Editable.args,
-    addedExtensions: [GifSearchPlugin],
-    customFloatingMenuButtons: [
-      {
-        extensionName: GifSearchPlugin.name,
-        menuButton: GifSearchButton,
-      },
-    ],
     initialContent: `Try searching for a GIF!`,
   },
   render: (args) => {
@@ -247,7 +240,19 @@ export const GifSearch: Story = {
           extensionConfigs={[
             {
               extensionName: GifSearchPlugin.name,
-              config: { tenorAPIKey: "POOAW0CATU4O", onImageSearchRequest },
+              config: {
+                // TODO: Figure out env in Storybook, vite instructions here not working https://storybook.js.org/docs/7.0/react/configure/environment-variables
+                // For now manually removing before commiting.
+                tenorAPIKey: "",
+                onImageSearchRequest,
+              },
+            },
+          ]}
+          addedExtensions={[GifSearchPlugin]}
+          customFloatingMenuButtons={[
+            {
+              extensionName: GifSearchPlugin.name,
+              menuButton: GifSearchButton,
             },
           ]}
         />
