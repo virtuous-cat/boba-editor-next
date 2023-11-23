@@ -1,5 +1,12 @@
-import { DEFAULT_EXTENSIONS, Editor } from "../../src/editor";
+import { DEFAULT_EXTENSIONS, Editor, EditorProps } from "../../src/editor";
+import {
+  GifSearchButton,
+  GifSearchPlugin,
+  GifSearchResponse,
+  GifSearchResponseObject,
+} from "@bobaboard/tiptap-gif-search";
 import { Meta, StoryObj } from "@storybook/react";
+import React, { ReactNode, useId, useRef, useState } from "react";
 
 import { BlockWithMenuPlugin } from "@bobaboard/tiptap-block-with-menu";
 import Blockquote from "@tiptap/extension-blockquote";
@@ -11,7 +18,6 @@ import Italic from "@tiptap/extension-italic";
 import ListItem from "@tiptap/extension-list-item";
 import { MenuButtonProps } from "../../src/editor/BubbleMenu";
 import OrderedList from "@tiptap/extension-ordered-list";
-import React from "react";
 import Strike from "@tiptap/extension-strike";
 import Underline from "@tiptap/extension-underline";
 import { withContentChangeHandler } from "@bobaboard/tiptap-storybook-inspector";
@@ -37,6 +43,7 @@ const meta = {
       Strike,
       Underline,
       BlockWithMenuPlugin,
+      GifSearchPlugin,
     ]),
     (Story, ctx) => {
       return (
@@ -181,6 +188,101 @@ export const LimitedHeadings: Story = {
       { extensionName: Heading.name, config: { levels: [1, 2] } },
     ],
     initialContent: `<h1>Heading 1</h1><h2>Heading 2</h2><h3>Heading 3</h3><p>Regular paragraph</p>`,
+  },
+};
+
+export const GifSearch: Story = {
+  args: {
+    ...Editable.args,
+    addedExtensions: [GifSearchPlugin],
+    customFloatingMenuButtons: [
+      {
+        extensionName: GifSearchPlugin.name,
+        menuButton: GifSearchButton,
+      },
+    ],
+    initialContent: `Try searching for a GIF!`,
+  },
+  render: (args) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [imagePreviews, setImagePreviews] = useState<ReactNode[]>([]);
+
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const previewsListId = useId();
+
+    const onUserInput = async (callback: (query: string) => void) => {
+      callback(searchTerm);
+    };
+    const displayHTML = (callback: () => ReactNode[]) => {
+      setImagePreviews(callback());
+    };
+    const onImageSearchRequest = (callbacks: {
+      onSearchRequest: (searchTerm: string) => Promise<GifSearchResponse>;
+      onSelectElement: (selectedElement: GifSearchResponseObject) => void;
+    }) => {
+      dialogRef.current?.show();
+      onUserInput(async (query: string) => {
+        const result = await callbacks.onSearchRequest(query);
+        displayHTML(() => {
+          return result.results.map((gifResult) => (
+            <li key={gifResult.id}>
+              <button
+                onClick={() => {
+                  callbacks.onSelectElement(gifResult);
+                  dialogRef.current?.close();
+                }}
+              >
+                <img src={gifResult.media_formats.nanogif.url} />
+              </button>
+            </li>
+          ));
+        });
+      });
+    };
+
+    return (
+      <div>
+        <Editor
+          {...args}
+          extensionConfigs={[
+            {
+              extensionName: GifSearchPlugin.name,
+              config: { tenorAPIKey: "POOAW0CATU4O", onImageSearchRequest },
+            },
+          ]}
+        />
+        <dialog
+          ref={dialogRef}
+          onClose={() => {
+            setSearchTerm("");
+            setImagePreviews([]);
+          }}
+        >
+          <label>
+            Search GIFs:
+            <input
+              placeholder="Search Tenor"
+              aria-controls={previewsListId}
+              value={searchTerm}
+              onChange={(e) => {
+                const query = e.currentTarget.value;
+                setSearchTerm(query);
+              }}
+            />
+          </label>
+          <ul
+            id={previewsListId}
+            style={{
+              display: "grid",
+              gridAutoFlow: "row",
+            }}
+            aria-label="GIF Previews"
+          >
+            {imagePreviews}
+          </ul>
+        </dialog>
+      </div>
+    );
   },
 };
 
